@@ -2,14 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
 final emailProvider = StateProvider<Email>((ref) {
-  print(Email);
+  print(ref);
   return Email('Sender ${generateRandomString(2)}', generateRandomString(25));
 });
 
@@ -18,7 +17,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   build(_, __) => MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Gmail landing page',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -42,36 +41,36 @@ class MyHomePage extends ConsumerWidget {
 
   @override
   build(_, ref) => Scaffold(
-    appBar: AppBar(
-        title: SizedBox(
-          height: 40,
-          child: TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search in messages',
-              iconColor: Colors.white,
-            ),
-          onChanged: (value) => {},
-          ),
-        ),
-      ),
     drawer: Drawer(
       child: ListView(
         padding: const EdgeInsets.all(8),
         children: const  [
           SizedBox(
-            height: 55,
+            height: 60,
+            width: 60,
             child: DrawerHeader(
-              child: Image(image: AssetImage("logo_gmail.png")),
+              child: Image(
+                  height: double.infinity,
+                  image: AssetImage("logo_gmail.png")),
             ),
           ),
           ListTile(
             title: Text('Inbox'),
           ),
-          ListTile(
-            title: Text('Send'),
+          ExpansionTile(
+            trailing: Icon(Icons.keyboard_arrow_down_outlined),
+            title: Text('Archives'),
+            children: [
+              ListTile(
+                title: Text('Work'),
+              ),
+              ListTile(
+                title: Text('Perso'),
+              ),
+            ],
           ),
           ListTile(
-            title: Text('Favorites'),
+            title: Text('Send'),
           ),
           ListTile(
             title: Text('Draft'),
@@ -79,8 +78,35 @@ class MyHomePage extends ConsumerWidget {
         ],
       ),
     ),
-    body: Email(ref.read(emailProvider).sender, ref.read(emailProvider).body),
-    floatingActionButton: ElevatedButton(
+    body: CustomScrollView(
+      slivers: [
+        const SliverAppBar(
+          title: TextField(
+           decoration: InputDecoration(
+             hintText: 'Search in messages',
+           ),
+           // onChanged: (value) => {},
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildListDelegate([
+            for(int i = 0; i < 15; i++)
+              Card(
+                child: ListTile(
+                  leading: const FlutterLogo(size: 56.0),
+                  title: Text(ref.read(emailProvider).sender),
+                  subtitle: Text(ref.read(emailProvider).body),
+                  trailing: const Icon(Icons.more_vert),
+                  isThreeLine: true,
+                  // onTap: () => ref.read(emailProvider),
+                ),
+              ),
+          ], // Email(ref.read(emailProvider).sender, ref.read(emailProvider).body),
+          ),
+        ),
+      ],
+    ),
+    floatingActionButton: ElevatedButton.icon(
       onPressed: () => {},
       style: ButtonStyle(
         shape: MaterialStateProperty.all<RoundedRectangleBorder>(
@@ -89,7 +115,8 @@ class MyHomePage extends ConsumerWidget {
           ),
         ),
       ),
-      child: const Text('Send e-mail'),
+      icon: const Icon(Icons.create),
+      label: const Text(style: TextStyle(fontSize: 18.0),'Send e-mail'),
     ),
     bottomNavigationBar: BottomNavigationBar(
       items: const [
@@ -120,7 +147,7 @@ class Email extends ConsumerWidget {
           subtitle: Text(body),
           trailing: const Icon(Icons.more_vert),
           isThreeLine: true,
-          onTap: () => ref.read(emailProvider),
+          // onTap: () => ref.read(emailProvider),
         ),
       ),
     ],
