@@ -28,104 +28,156 @@ class MyApp extends ConsumerWidget {
 String generateRandomString(int length) {
   final random = Random();
   const availableChars =
-      'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+      'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz';
   final randomString = List.generate(length,
           (index) => availableChars[random.nextInt(availableChars.length)]).join();
 
   return randomString;
 }
 
-class MyHomePage extends ConsumerWidget {
+class MyHomePage extends StatefulWidget {
+  final title;
   const MyHomePage({super.key, required this.title});
-  final String title;
 
   @override
-  build(_, ref) => Scaffold(
-    drawer: Drawer(
-      child: ListView(
-        padding: const EdgeInsets.all(8),
-        children: const  [
-          SizedBox(
-            height: 60,
-            width: 60,
-            child: DrawerHeader(
-              child: Image(
-                  height: double.infinity,
-                  image: AssetImage("logo_gmail.png")),
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  late final _animationController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+    reverseDuration: const Duration(seconds: 2),
+  );
+  bool onSearchClick = false;
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+
+  //ScrollNotifier evenement de scroll
+  //provider, lance anime du bouton
+
+  //overlay ou page qui vient d'en haut lors du clic
+
+  //Navigator.push pour le clic sur un email
+
+  //Search bar à faire fonctionner
+
+  @override
+  build(context) => SafeArea(
+    child: Scaffold(
+      key: scaffoldKey,
+      drawer: Drawer(
+        child: ListView(
+          padding: const EdgeInsets.all(8),
+          children: [
+            SizedBox(
+              height: 60,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Image.asset('logo_gmail.png'),
+                  const Divider(color: Color.fromRGBO(
+                      166, 159, 159, 0.3), thickness: 2),
+                ],
+              ),
+            ),
+            const ListTile(
+              leading: Icon(Icons.email),
+              title: Text('Inbox'),
+            ),
+            const ExpansionTile(
+              leading: Icon(Icons.archive),
+              trailing: Icon(Icons.keyboard_arrow_down_outlined),
+              title: Text('Archives'),
+              children: [
+                ListTile(
+                  title: Text('Work'),
+                ),
+                ListTile(
+                  title: Text('Perso'),
+                ),
+              ],
+            ),
+            const ListTile(
+              leading: Icon(Icons.send),
+              title: Text('Send'),
+            ),
+            const ListTile(
+              leading: Icon(Icons.note_alt),
+              title: Text('Draft'),
+            ),
+          ],
+        ),
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            leading: AnimatedSwitcher(
+              duration: const Duration(seconds: 5),
+              transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+              child: !onSearchClick ? IconButton(
+                icon: const Icon(Icons.menu_rounded),
+                onPressed: () => scaffoldKey.currentState?.openDrawer(),
+              ) : IconButton(
+                icon: AnimatedIcon(icon: AnimatedIcons.arrow_menu, progress: _animationController.view,),
+                onPressed: () => scaffoldKey.currentState?.closeDrawer(),
+              ),
+            ),
+            floating: true,
+            pinned: false,
+            snap: false,
+            title: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Search in messages',
+              ),
+              onTap: () {
+                setState(() {
+                  onSearchClick = !onSearchClick;
+                });
+              },
             ),
           ),
-          ListTile(
-            title: Text('Inbox'),
-          ),
-          ExpansionTile(
-            trailing: Icon(Icons.keyboard_arrow_down_outlined),
-            title: Text('Archives'),
-            children: [
-              ListTile(
-                title: Text('Work'),
-              ),
-              ListTile(
-                title: Text('Perso'),
-              ),
-            ],
-          ),
-          ListTile(
-            title: Text('Send'),
-          ),
-          ListTile(
-            title: Text('Draft'),
-          ),
-        ],
-      ),
-    ),
-    body: CustomScrollView(
-      slivers: [
-        const SliverAppBar(
-          title: TextField(
-           decoration: InputDecoration(
-             hintText: 'Search in messages',
-           ),
-           // onChanged: (value) => {},
-          ),
-        ),
-        SliverList(
-          delegate: SliverChildListDelegate([
-            for(int i = 0; i < 15; i++)
+          SliverList(
+          delegate: SliverChildListDelegate(
+            [
+            for(int i = 0; i < 10; i++)
               Card(
                 child: ListTile(
                   leading: const FlutterLogo(size: 56.0),
-                  title: Text(ref.read(emailProvider).sender),
-                  subtitle: Text(ref.read(emailProvider).body),
+                  title: Text(generateRandomString(8)),
+                  subtitle: Text(generateRandomString(25)),
                   trailing: const Icon(Icons.more_vert),
                   isThreeLine: true,
                   // onTap: () => ref.read(emailProvider),
                 ),
               ),
-          ], // Email(ref.read(emailProvider).sender, ref.read(emailProvider).body),
+            ], // Email(ref.read(emailProvider).sender, ref.read(emailProvider).body),
           ),
         ),
       ],
-    ),
-    floatingActionButton: ElevatedButton.icon(
-      onPressed: () => {},
-      style: ButtonStyle(
-        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18.0),
-          ),
-        ),
       ),
-      icon: const Icon(Icons.create),
-      label: const Text(style: TextStyle(fontSize: 18.0),'Send e-mail'),
-    ),
-    bottomNavigationBar: BottomNavigationBar(
-      items: const [
-        BottomNavigationBarItem(
-            label: 'Inbox', icon: Icon(Icons.email_outlined)),
-        BottomNavigationBarItem(
-            label: 'Meet', icon: Icon(Icons.video_camera_back_outlined)),
-      ],
-      // selectedItemColor: Colors.amber[800],
+      floatingActionButton: ElevatedButton.icon(
+        onPressed: () => {},
+        style: ButtonStyle(
+          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18.0),
+            ),
+          ),
+        ),
+        icon: const Icon(Icons.create),
+        label: const Text(style: TextStyle(fontSize: 18.0),'Send e-mail'),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+              label: 'Inbox', icon: Icon(Icons.email_outlined)),
+          BottomNavigationBarItem(
+              label: 'Meet', icon: Icon(Icons.video_camera_back_outlined)),
+        ],
+        // selectedItemColor: Colors.amber[800],
+      ),
     ),
   );
 }
