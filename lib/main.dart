@@ -29,7 +29,9 @@ class MyApp extends ConsumerWidget {
       home: MyHomePage(title: 'Gmail landing page', ref: ref),
       initialRoute: '/',
       routes: <String, WidgetBuilder>{
-        '/${Routes.email_page.name}': (context) => const EmailPage(),
+        '/${Routes.email_page.name}': (context) =>
+            EmailPage(ref.read(emailProvider).sender,
+                ref.read(emailProvider).body),
         '/${Routes.search_tap_page.name}': (context) => const SearchTapPage(),
       }
     );
@@ -77,9 +79,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
   //Search bar à faire fonctionner
 
   @override
-  build(context) {
-
-    return SafeArea(
+  build(context) => SafeArea(
     child: NotificationListener(
       // onNotification: (notification) {
       //   print(notification);
@@ -189,7 +189,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
       ),
     ),
   );
-  }
 }
 
 class Email extends ConsumerWidget {
@@ -219,21 +218,55 @@ class Email extends ConsumerWidget {
 }
 
 class EmailPage extends ConsumerWidget {
-  const EmailPage({super.key});
+  EmailPage(this.sender, this.body, {super.key});
+  final String sender;
+  final String body;
+
+  final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   build(context, ref) =>
-      Material(
+      SafeArea(
         child: Scaffold(
+          key: scaffoldKey,
           appBar: AppBar(
             leading: IconButton(icon: const Icon(Icons.arrow_back),
               onPressed: () => Navigator.pushNamed(context, '/'),),
             actions: [
+              IconButton(icon: const Icon(Icons.archive_outlined),
+                onPressed: () => Navigator.pushNamed(context, '/'),),
               IconButton(icon: const Icon(Icons.email_outlined),
                 onPressed: () => Navigator.pushNamed(context, '/'),),
-              IconButton(icon: const Icon(Icons.restore_from_trash_sharp),
+              IconButton(icon: const Icon(Icons.delete),
                 onPressed: () => Navigator.pushNamed(context, '/'),),
+              IconButton(icon: const Icon(Icons.more_horiz),
+                onPressed: () => scaffoldKey.currentState!.openDrawer(),),
             ],
+          ),
+          drawer: Drawer(
+            child: ListView(
+              padding: const EdgeInsets.all(8),
+              children: const [
+                ListTile(
+                  title: Text('Edit label'),
+                ),
+                ListTile(
+                  title: Text('Add to favorite'),
+                ),
+                ListTile(
+                  title: Text('Ignore'),
+                ),
+                ListTile(
+                  title: Text('Unsubscribe'),
+                ),
+                ListTile(
+                  title: Text('Mark as spam'),
+                ),
+                ListTile(
+                  title: Text('Paste'),
+                ),
+              ],
+            ),
           ),
           body: Text(
             "Email Page",
