@@ -2,20 +2,30 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-final emailProvider = StateProvider<Email>((ref) {
+final emailProvider = StateProvider<EmailData>((ref) {
   print(ref);
-  return Email('Sender ${generateRandomString(8)}', generateRandomString(25));
+  return EmailData('Sender ${generateRandomString(8)}', 'Object ${generateRandomString(32)}', generateRandomString(80));
 });
 
 enum Routes {
   email_page,
   search_tap_page,
 }
+
+class EmailData {
+  final String sender;
+  final String object;
+  final String body;
+  const EmailData(this.sender, this.object, this.body);
+}
+
+final formattedDateTimeNow = DateFormat('kk:mm').format(DateTime.now());
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -31,7 +41,7 @@ class MyApp extends ConsumerWidget {
       routes: <String, WidgetBuilder>{
         '/${Routes.email_page.name}': (context) =>
             EmailPage(ref.read(emailProvider).sender,
-                ref.read(emailProvider).body),
+                ref.read(emailProvider).body, ref),
         '/${Routes.search_tap_page.name}': (context) => const SearchTapPage(),
       }
     );
@@ -145,7 +155,12 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
               pinned: false,
               snap: false,
               actions: const [
-                CircleAvatar(child: Image(image: AssetImage('dracula.png'),),)
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundImage: AssetImage('dracula.png'),),
+                )
               ],
               title: TextField(
                 decoration: const InputDecoration(
@@ -157,7 +172,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
             // if (!onSearchClick)
               SliverList(delegate: SliverChildListDelegate([
                 for(int i = 0; i < 10; i++)
-                  Email(ref.read(emailProvider).sender, ref.read(emailProvider).body)
+                  Email(ref.read(emailProvider).sender, ref.read(emailProvider).object, ref.read(emailProvider).body)
               ],
             ),
           ),
@@ -192,25 +207,36 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
 }
 
 class Email extends ConsumerWidget {
-  const Email(this.sender, this.body, {super.key});
+  Email(this.sender, this.object, this.body, {super.key});
   final String sender;
+  final String object;
   final String body;
 
   @override
   build(context, ref) => Card(
     child: ListTile(
       leading: const FlutterLogo(size: 56.0),
-      title: Padding(
-        padding: const EdgeInsets.only(left: 8.0),
-        child: Text(ref.read(emailProvider).sender),
-      ),
+      title: Text(ref.read(emailProvider).sender),
       subtitle: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(ref.read(emailProvider).body),
-          Text(ref.read(emailProvider).body),
+          Padding(
+            padding: const EdgeInsets.only(top:8.0, bottom: 8.0),
+            child: Text(ref.read(emailProvider).object, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          Text(ref.read(emailProvider).body, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
-      trailing: const Icon(Icons.more_vert),
+      trailing: Column(
+        children: [
+          Text(formattedDateTimeNow),
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Icon(Icons.star_border_outlined),
+          ),
+        ],
+      ),
       isThreeLine: true,
       onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
     ),
@@ -218,7 +244,7 @@ class Email extends ConsumerWidget {
 }
 
 class EmailPage extends ConsumerWidget {
-  EmailPage(this.sender, this.body, {super.key});
+  EmailPage(this.sender, this.body, WidgetRef ref, {super.key});
   final String sender;
   final String body;
 
@@ -268,12 +294,32 @@ class EmailPage extends ConsumerWidget {
               ],
             ),
           ),
-          body: Text(
-            "Email Page",
-            style: TextStyle(
-              color: Colors.green[900],
-              fontSize: 45,
-              fontWeight: FontWeight.w500,
+          body: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ListView(
+              children: [
+                ListTile(
+                  title: Text(ref.read(emailProvider).object,
+                    style: const TextStyle(fontSize: 18.0),),
+                  trailing:
+                    IconButton(onPressed: () {},
+                        icon: const Icon(Icons.star_border_outlined)),
+                ),
+                ListTile(
+                  leading: const CircleAvatar(radius: 16, backgroundImage: AssetImage('avatar.png'),),
+                  title: Text('${ref.read(emailProvider).sender} $formattedDateTimeNow'),
+                  subtitle: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text('to me'),
+                      IconButton(iconSize: 18.0,icon: Icon(Icons.keyboard_arrow_down), onPressed: () {},)
+                    ],
+                  ),
+                  isThreeLine: false,
+                  trailing: IconButton(onPressed: () {}, icon: Icon(Icons.more_horiz),),
+                ),
+              ],
             ),
           ),
         ),
