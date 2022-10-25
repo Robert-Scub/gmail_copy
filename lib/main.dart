@@ -74,21 +74,55 @@ class MyHomePage extends ConsumerStatefulWidget {
 
 class _MyHomePageState extends ConsumerState<MyHomePage>
     with SingleTickerProviderStateMixin {
-  final scaffoldKey = GlobalKey<ScaffoldState>();
-  late Widget _newEmailButton = ElevatedButton.icon(
-    onPressed: () => {},
-    style: ButtonStyle(
-      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24.0),
-        ),
-      ),
-    ),
-    icon: const Icon(Icons.create),
-    label: const Text(style: TextStyle(fontSize: 18.0),'New e-mail'),
-  );
+  final GlobalKey<SliverAnimatedListState> _listKey =
+  GlobalKey<SliverAnimatedListState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late ListModel<int> _list;
+  int? _selectedItem;
+  late int _nextItem;
 
   _MyHomePageState(WidgetRef ref);
+
+  Widget _buildItem(BuildContext context, int index, Animation<double> animation) {
+    return CardMailItem(
+      animation: animation,
+      item: _list[index],
+      selected: _selectedItem == _list[index],
+      onTap: () {
+        setState(() {
+          _selectedItem = _selectedItem == _list[index] ? null : _list[index];
+        });
+      },
+    );
+  }
+
+  Widget _buildRemovedItem(
+      int item, BuildContext context, Animation<double> animation) {
+    return CardMailItem(
+      animation: animation,
+      item: item,
+    );
+  }
+
+  void _remove() {
+    if (_selectedItem != null) {
+      _list.removeAt(_list.indexOf(_selectedItem!));
+      setState(() {
+        _selectedItem = null;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _list = ListModel<int>(
+      listKey: _listKey,
+      initialItems: <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      removedItemBuilder: _buildRemovedItem,
+    );
+    _nextItem = 13;
+  }
 
   @override
   build(context) => SafeArea(
@@ -96,26 +130,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
       onNotification: (notification) {
         setState(() {
           notification.scrollDelta! < 0 ? scrollingUp = true : scrollingUp = false;
-          _newEmailButton = !scrollingUp ? IconButton(
-              onPressed: () {},
-              icon: const CircleAvatar(radius: 24.0, child: Icon(Icons.create, size: 24.0),))
-                : ElevatedButton.icon(
-                onPressed: () => {},
-                style: ButtonStyle(
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24.0),
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.create),
-                label: const Text(style: TextStyle(fontSize: 18.0),'New e-mail'),
-          );
         });
         return scrollingStatus;
       },
       child: Scaffold(
-        key: scaffoldKey,
+        key: _scaffoldKey,
         drawer: Drawer(
           child: ListView(
             padding: const EdgeInsets.all(8),
@@ -165,7 +184,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
             SliverAppBar(
               leading: IconButton(
                 icon: const Icon(Icons.menu_rounded),
-                onPressed: () => scaffoldKey.currentState?.openDrawer(),
+                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
               ),
               floating: true,
               pinned: false,
@@ -180,31 +199,65 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                 )
               ],
             ),
-              SliverList(delegate: SliverChildListDelegate([
-                for(int i = 0; i < 10; i++)
-                  EmailList(ref.read(emailProvider).sender, ref.read(emailProvider).object, ref.read(emailProvider).body)
-              ],
+            SliverAnimatedList(
+              key: _listKey,
+              initialItemCount: _list.length,
+              itemBuilder: _buildItem,
             ),
-          ),
-        ],
-        ),
-        floatingActionButton:  AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          //transformAlignment: AlignmentDirectional.centerStart,
-          child:  _newEmailButton,
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          items: const [
-            BottomNavigationBarItem(
-                label: 'Inbox', icon: Icon(Icons.email_outlined)),
-            BottomNavigationBarItem(
-                label: 'Meet', icon: Icon(Icons.video_camera_back_outlined)),
           ],
-          // selectedItemColor: Colors.amber[800],
         ),
+        floatingActionButton: AnimatedContainer(
+          width: scrollingUp ? 140 : 50,
+          height: 50,
+          duration: const Duration(milliseconds: 300),
+          //transformAlignment: AlignmentDirectional.centerStart,
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ButtonStyle(
+              shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+              ),
+            ),
+            child: Row(children: [
+              const Icon(Icons.create, size: 18.0,),
+              if (scrollingUp)
+                const Padding(
+                  padding: EdgeInsets.only(left: 8.0),
+                  child: Text(style: TextStyle(fontSize: 16.0),'New e-mail'),
+                )
+              else const Padding(padding: EdgeInsets.zero)
+            ],),
+          ),
+        ),
+        bottomNavigationBar: _buildBottomBar(),
       ),
     ),
   );
+
+  Widget? _buildBottomBar() {
+    if (scrollingUp) {
+      return Card(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
+              child: IconButton(onPressed: () {}, icon: Icon(Icons.mail_outline_outlined)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
+              child: IconButton(onPressed: () {}, icon: Icon(Icons.video_camera_back_outlined)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
+              child: IconButton(onPressed: () => _remove(), icon: Icon(Icons.delete)),
+            ),
+          ],),
+      );
+    }
+  }
 }
 
 class EmailList extends ConsumerWidget {
@@ -214,37 +267,33 @@ class EmailList extends ConsumerWidget {
   final String body;
 
   @override
-  build(context, ref) {
-    return Card(
-    child: ListTile(
-      leading: const CircleAvatar(radius: 24, backgroundImage: AssetImage('avatar.png'),),
-      title: Text(ref.read(emailProvider).sender),
-      subtitle: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top:8.0, bottom: 8.0),
-            child: Text(ref.read(emailProvider).object, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-          Text(ref.read(emailProvider).body, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      ),
-      trailing: Column(
-        children: [
-          Text(formattedDateTimeNow),
-          IconButton(
-            padding: const EdgeInsets.only(top: 8.0),
-            onPressed: () {},
-            constraints: const BoxConstraints(),
-            icon: const Icon(Icons.star_border_outlined),),
-        ],
-      ),
-      isThreeLine: true,
-      onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
+  build(context, ref) => ListTile(
+    leading: const CircleAvatar(radius: 24, backgroundImage: AssetImage('avatar.png'),),
+    title: Text(sender),
+    subtitle: Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+          child: Text(object, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        Text(body, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
     ),
+    trailing: Column(
+      children: [
+        Text(formattedDateTimeNow),
+        IconButton(
+          padding: const EdgeInsets.only(top: 8.0),
+          onPressed: () {},
+          constraints: const BoxConstraints(),
+          icon: const Icon(Icons.star_border_outlined),),
+      ],
+    ),
+    isThreeLine: true,
+    //onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
   );
-  }
 }
 
 class EmailPage extends ConsumerWidget {
@@ -411,3 +460,77 @@ class SearchInMail extends StatelessWidget {
     },
   );
 }
+
+class CardMailItem extends StatelessWidget {
+  const CardMailItem({
+    super.key,
+    this.onTap,
+    this.selected = false,
+    required this.animation,
+    required this.item,
+  }) : assert(item >= 0);
+
+  final Animation<double> animation;
+  final VoidCallback? onTap;
+  final int item;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+    sizeFactor: animation,
+    child: GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        height: 90.0,
+        child: Card(
+          color: selected
+              ? Colors.green.shade400
+              : Colors.white,
+          child: EmailList('Apple', 'Expiring subscription',
+              'Action needed in your account, '
+                  'please update your payment preference because we could not proceed this month'),
+        )
+      ),
+    ),
+  );
+}
+
+class ListModel<E> {
+  ListModel({
+    required this.listKey,
+    required this.removedItemBuilder,
+    Iterable<E>? initialItems,
+  }) : _items = List<E>.from(initialItems ?? <E>[]);
+
+  final GlobalKey<SliverAnimatedListState> listKey;
+  final RemovedItemBuilder removedItemBuilder;
+  final List<E> _items;
+
+  SliverAnimatedListState get _animatedList => listKey.currentState!;
+
+  void insert(int index, E item) {
+    _items.insert(index, item);
+    _animatedList.insertItem(index);
+  }
+
+  E removeAt(int index) {
+    final E removedItem = _items.removeAt(index);
+    if (removedItem != null) {
+      _animatedList.removeItem(
+        index,
+            (BuildContext context, Animation<double> animation) =>
+            removedItemBuilder(index, context, animation),
+      );
+    }
+    return removedItem;
+  }
+
+  int get length => _items.length;
+
+  E operator [](int index) => _items[index];
+
+  int indexOf(E item) => _items.indexOf(item);
+}
+
+typedef RemovedItemBuilder = Widget Function(
+    int item, BuildContext context, Animation<double> animation);
