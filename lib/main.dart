@@ -10,7 +10,7 @@ void main() {
 
 final emailProvider = StateProvider<EmailData>((ref) {
   print(ref);
-  return EmailData('Sender ${generateRandomString(8)}', 'Object ${generateRandomString(32)}', generateRandomString(80));
+  return EmailData('Sender ${generateRandomString(15)}', 'Object ${generateRandomString(40)}', generateRandomString(80));
 });
 
 enum Routes {
@@ -26,6 +26,8 @@ class EmailData {
 }
 
 final formattedDateTimeNow = DateFormat('kk:mm').format(DateTime.now());
+bool scrollingStatus = false;
+bool scrollingUp = false;
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -66,38 +68,52 @@ class MyHomePage extends ConsumerStatefulWidget {
   _MyHomePageState createState() => _MyHomePageState(ref);
 }
 
-final scrollingProvider = StateProvider<Scrolling>((ref) => scrollingStatus);
-final scrollingStatus = Scrolling(isScrolling: false);
-
-class Scrolling {
-  late bool isScrolling;
-  
-  Scrolling({required this.isScrolling});
-}
+/*TODO */
+//overlay ou page qui vient d'en haut lors du clic
+//Search bar à faire fonctionner
 
 class _MyHomePageState extends ConsumerState<MyHomePage>
     with SingleTickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  late Widget _newEmailButton = ElevatedButton.icon(
+    onPressed: () => {},
+    style: ButtonStyle(
+      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.0),
+        ),
+      ),
+    ),
+    icon: const Icon(Icons.create),
+    label: const Text(style: TextStyle(fontSize: 18.0),'New e-mail'),
+  );
 
   _MyHomePageState(WidgetRef ref);
 
-  //ScrollNotifier evenement de scroll
-  //provider, lance anime du bouton
-
-  //overlay ou page qui vient d'en haut lors du clic
-
-  //Search bar à faire fonctionner
-
   @override
   build(context) => SafeArea(
-    child: NotificationListener(
-      // onNotification: (notification) {
-      //   print(notification);
-      //   print(scrollingStatus.isScrolling);
-      //   return notification ?
-      //     scrollingStatus.isScrolling = true
-      //           : scrollingStatus.isScrolling = false;
-      // },
+    child: NotificationListener<ScrollUpdateNotification>(
+      onNotification: (notification) {
+        setState(() {
+          notification.scrollDelta! < 0 ? scrollingUp = true : scrollingUp = false;
+          _newEmailButton = !scrollingUp ? IconButton(
+              onPressed: () {},
+              icon: const CircleAvatar(radius: 24.0, child: Icon(Icons.create, size: 24.0),))
+                : ElevatedButton.icon(
+                onPressed: () => {},
+                style: ButtonStyle(
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24.0),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.create),
+                label: const Text(style: TextStyle(fontSize: 18.0),'New e-mail'),
+          );
+        });
+        return scrollingStatus;
+      },
       child: Scaffold(
         key: scaffoldKey,
         drawer: Drawer(
@@ -154,6 +170,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
               floating: true,
               pinned: false,
               snap: false,
+              title: SearchInMail(Routes.search_tap_page.name),
               actions: const [
                 Padding(
                   padding: EdgeInsets.all(8.0),
@@ -162,35 +179,19 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                     backgroundImage: AssetImage('dracula.png'),),
                 )
               ],
-              title: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search in mail',
-                ),
-                onTap: () => Navigator.pushNamed(context, '/${Routes.search_tap_page.name}'),
-              ),
             ),
-            // if (!onSearchClick)
               SliverList(delegate: SliverChildListDelegate([
                 for(int i = 0; i < 10; i++)
-                  Email(ref.read(emailProvider).sender, ref.read(emailProvider).object, ref.read(emailProvider).body)
+                  EmailList(ref.read(emailProvider).sender, ref.read(emailProvider).object, ref.read(emailProvider).body)
               ],
             ),
           ),
         ],
         ),
-        floatingActionButton: ElevatedButton.icon(
-          onPressed: () => {},
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.0),
-              ),
-            ),
-          ),
-          icon: const Icon(Icons.create),
-          label: ref.watch(scrollingProvider).isScrolling ?
-            const Text('')
-              : const Text(style: TextStyle(fontSize: 18.0),'New e-mail'),
+        floatingActionButton:  AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          //transformAlignment: AlignmentDirectional.centerStart,
+          child:  _newEmailButton,
         ),
         bottomNavigationBar: BottomNavigationBar(
           items: const [
@@ -206,16 +207,17 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
   );
 }
 
-class Email extends ConsumerWidget {
-  Email(this.sender, this.object, this.body, {super.key});
+class EmailList extends ConsumerWidget {
+  EmailList(this.sender, this.object, this.body, {super.key});
   final String sender;
   final String object;
   final String body;
 
   @override
-  build(context, ref) => Card(
+  build(context, ref) {
+    return Card(
     child: ListTile(
-      leading: const FlutterLogo(size: 56.0),
+      leading: const CircleAvatar(radius: 24, backgroundImage: AssetImage('avatar.png'),),
       title: Text(ref.read(emailProvider).sender),
       subtitle: Column(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -231,16 +233,18 @@ class Email extends ConsumerWidget {
       trailing: Column(
         children: [
           Text(formattedDateTimeNow),
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
-            child: Icon(Icons.star_border_outlined),
-          ),
+          IconButton(
+            padding: const EdgeInsets.only(top: 8.0),
+            onPressed: () {},
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.star_border_outlined),),
         ],
       ),
       isThreeLine: true,
       onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
     ),
   );
+  }
 }
 
 class EmailPage extends ConsumerWidget {
@@ -263,7 +267,7 @@ class EmailPage extends ConsumerWidget {
                 onPressed: () => Navigator.pushNamed(context, '/'),),
               IconButton(icon: const Icon(Icons.email_outlined),
                 onPressed: () => Navigator.pushNamed(context, '/'),),
-              IconButton(icon: const Icon(Icons.delete),
+              IconButton(icon: const Icon(Icons.delete_outlined),
                 onPressed: () => Navigator.pushNamed(context, '/'),),
               IconButton(icon: const Icon(Icons.more_horiz),
                 onPressed: () => scaffoldKey.currentState!.openDrawer(),),
@@ -301,23 +305,38 @@ class EmailPage extends ConsumerWidget {
                 ListTile(
                   title: Text(ref.read(emailProvider).object,
                     style: const TextStyle(fontSize: 18.0),),
-                  trailing:
-                    IconButton(onPressed: () {},
-                        icon: const Icon(Icons.star_border_outlined)),
+                  trailing: IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.star_border_outlined)),
                 ),
                 ListTile(
-                  leading: const CircleAvatar(radius: 16, backgroundImage: AssetImage('avatar.png'),),
-                  title: Text('${ref.read(emailProvider).sender} $formattedDateTimeNow'),
+                  leading: const CircleAvatar(radius: 20, backgroundImage: AssetImage('avatar.png'),),
+                  title: Row(
+                    children: [
+                      Container(
+                        width: 65,
+                        child: Text(ref.read(emailProvider).sender, maxLines: 1,
+                        overflow: TextOverflow.ellipsis,),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Text(formattedDateTimeNow),
+                      ),
+                    ],
+                  ),
                   subtitle: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text('to me'),
-                      IconButton(iconSize: 18.0,icon: Icon(Icons.keyboard_arrow_down), onPressed: () {},)
+                      const Text('to me'),
+                      Container(
+                        height: 30,
+                        width: 30,
+                        child: IconButton(iconSize: 18.0, icon: const Icon(Icons.keyboard_arrow_down), onPressed: () {},))
                     ],
                   ),
                   isThreeLine: false,
-                  trailing: IconButton(onPressed: () {}, icon: Icon(Icons.more_horiz),),
+                  trailing: IconButton(onPressed: () {}, icon: const Icon(Icons.more_horiz),),
                 ),
               ],
             ),
@@ -340,14 +359,9 @@ class SearchTapPage extends ConsumerWidget {
               IconButton(onPressed: () {},
                   icon: const Icon(Icons.mic_rounded))
             ],
-            title: const TextField(
-              decoration: InputDecoration(
-                hintText: 'Search in mail',
-              ),
-              //onTap: () => Navigator.pushNamed(context, '/'),
-            ),
+            title: const SearchInMail(''),
           ),
-          body: Container(
+          body: SizedBox(
             height: 50,
             child: CustomScrollView(
               scrollDirection: Axis.horizontal,
@@ -376,4 +390,24 @@ class SearchTapPage extends ConsumerWidget {
           )
         ),
       );
+}
+
+class SearchInMail extends StatelessWidget {
+  const SearchInMail(this.name, {super.key});
+  final String name;
+
+  @override
+  build(context) => TextFormField(
+    style: const TextStyle(color: Colors.white,),
+    decoration: const InputDecoration(
+      hintStyle: TextStyle(color: Colors.white),
+      border: InputBorder.none,
+      hintText: 'Search in mail',
+    ),
+    onTap: () {
+      if(name.isNotEmpty) {
+        Navigator.pushNamed(context, '/$name');
+      }
+    },
+  );
 }
