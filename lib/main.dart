@@ -10,7 +10,9 @@ void main() {
 
 final emailProvider = StateProvider<EmailData>((ref) {
   print(ref);
-  return EmailData('Sender ${generateRandomString(15)}', 'Object ${generateRandomString(40)}', generateRandomString(80));
+  return const EmailData('Apple', 'Expiring subscription',
+  'Action needed in your account, '
+      'please update your payment preference because we could not proceed this month');
 });
 
 enum Routes {
@@ -181,7 +183,22 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         ),
         body: CustomScrollView(
           slivers: [
-            SliverAppBar(
+            _selectedItem != null && _selectedItem == _list[_selectedItem!] ? SliverAppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pushNamed(context, '/'),
+              ),
+              actions: [
+                IconButton(icon: const Icon(Icons.archive_outlined),
+                  onPressed: () => Navigator.pushNamed(context, '/'),),
+                IconButton(icon: const Icon(Icons.mark_email_read),
+                  onPressed: () => Navigator.pushNamed(context, '/'),),
+                IconButton(icon: const Icon(Icons.delete_outlined),
+                  onPressed: () => _remove(),),
+                IconButton(icon: const Icon(Icons.more_horiz),
+                  onPressed: () => Navigator.pushNamed(context, '/'),),
+              ],
+            ) : SliverAppBar(
               leading: IconButton(
                 icon: const Icon(Icons.menu_rounded),
                 onPressed: () => _scaffoldKey.currentState?.openDrawer(),
@@ -236,28 +253,25 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
     ),
   );
 
-  Widget? _buildBottomBar() {
-    if (scrollingUp) {
-      return Card(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
-              child: IconButton(onPressed: () {}, icon: Icon(Icons.mail_outline_outlined)),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
-              child: IconButton(onPressed: () {}, icon: Icon(Icons.video_camera_back_outlined)),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 32.0, right: 32.0),
-              child: IconButton(onPressed: () => _remove(), icon: Icon(Icons.delete)),
-            ),
-          ],),
-      );
-    }
-  }
+  Widget? _buildBottomBar() => AnimatedContainer(
+    height: scrollingUp ? 50 : 0,
+    duration: const Duration(milliseconds: 300),
+    child: Card(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 64.0, right: 64.0),
+            child: IconButton(onPressed: () {}, icon: Icon(Icons.mail_outline_outlined)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 64.0, right: 64.0),
+            child: IconButton(onPressed: () {}, icon: Icon(Icons.video_camera_back_outlined)),
+          ),
+        ],),
+    ),
+  );
+
 }
 
 class EmailList extends ConsumerWidget {
@@ -359,7 +373,7 @@ class EmailPage extends ConsumerWidget {
                     icon: const Icon(Icons.star_border_outlined)),
                 ),
                 ListTile(
-                  leading: const CircleAvatar(radius: 20, backgroundImage: AssetImage('avatar.png'),),
+                  leading: const CircleAvatar(radius: 24, backgroundImage: AssetImage('avatar.png'),),
                   title: Row(
                     children: [
                       Container(
@@ -426,11 +440,12 @@ class SearchTapPage extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(18.0),
                           ),
                         ),
-                      ), child: Row(
-                        children: const [
-                          Text('Libellé'),
-                          Icon(Icons.arrow_drop_down, size: 18.0,)
-                        ],
+                      ),
+                      child: Row(
+                      children: const [
+                        Text('Libellé'),
+                        Icon(Icons.arrow_drop_down, size: 18.0,)
+                      ],
                       ),),
                     )
                 ]))
@@ -461,7 +476,7 @@ class SearchInMail extends StatelessWidget {
   );
 }
 
-class CardMailItem extends StatelessWidget {
+class CardMailItem extends ConsumerWidget {
   const CardMailItem({
     super.key,
     this.onTap,
@@ -475,22 +490,48 @@ class CardMailItem extends StatelessWidget {
   final int item;
   final bool selected;
 
+
   @override
-  Widget build(BuildContext context) => SizeTransition(
+  build(context, ref) => SizeTransition(
     sizeFactor: animation,
-    child: GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        height: 90.0,
-        child: Card(
-          color: selected
-              ? Colors.green.shade400
-              : Colors.white,
-          child: EmailList('Apple', 'Expiring subscription',
-              'Action needed in your account, '
-                  'please update your payment preference because we could not proceed this month'),
-        )
-      ),
+    child: SizedBox(
+      height: 90.0,
+      child: Card(
+        child: ListTile(
+          leading: IconButton(
+            iconSize: 44.0,
+            onPressed: onTap,
+            icon: selected ? Image.asset('tick.png') : const CircleAvatar(
+              backgroundColor: Colors.white,
+              radius: 20.0,
+              backgroundImage: AssetImage('avatar.png'),),
+          ),
+          title: Text(ref.read(emailProvider).sender),
+          subtitle: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                child: Text(ref.read(emailProvider).object, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+              Text(ref.read(emailProvider).body, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+          trailing: Column(
+            children: [
+              Text(formattedDateTimeNow),
+              IconButton(
+                padding: const EdgeInsets.only(top: 8.0),
+                onPressed: () {},
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.star_border_outlined),),
+            ],
+          ),
+          isThreeLine: true,
+          onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
+        ),
+      )
     ),
   );
 }
