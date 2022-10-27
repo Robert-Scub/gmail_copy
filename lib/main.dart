@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -183,18 +184,23 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         ),
         body: CustomScrollView(
           slivers: [
-            _selectedItem != null && _selectedItem == _list[_selectedItem!] ? SliverAppBar(
+            _selectedItem != null ? SliverAppBar(
+              floating: true,
+              pinned: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pushNamed(context, '/'),
               ),
+              title: Text(_selectedItem != null ? '1' : ''),
               actions: [
                 IconButton(icon: const Icon(Icons.archive_outlined),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
+                IconButton(icon: const Icon(Icons.delete_outlined),
+                  onPressed: () {
+                    _remove();
+                  },),
                 IconButton(icon: const Icon(Icons.mark_email_read),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
-                IconButton(icon: const Icon(Icons.delete_outlined),
-                  onPressed: () => _remove(),),
                 IconButton(icon: const Icon(Icons.more_horiz),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
               ],
@@ -262,11 +268,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 64.0, right: 64.0),
-            child: IconButton(onPressed: () {}, icon: Icon(Icons.mail_outline_outlined)),
+            child: IconButton(onPressed: () {}, icon: const Icon(Icons.mail_outline_outlined)),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 64.0, right: 64.0),
-            child: IconButton(onPressed: () {}, icon: Icon(Icons.video_camera_back_outlined)),
+            child: IconButton(onPressed: () {}, icon: const Icon(Icons.video_camera_back_outlined)),
           ),
         ],),
     ),
@@ -490,6 +496,10 @@ class CardMailItem extends ConsumerWidget {
   final int item;
   final bool selected;
 
+  TextStyle boldOnSelect() {
+    return selected ? const TextStyle(fontWeight: FontWeight.bold) :
+      const TextStyle(fontWeight: FontWeight.normal);
+  }
 
   @override
   build(context, ref) => SizeTransition(
@@ -497,39 +507,69 @@ class CardMailItem extends ConsumerWidget {
     child: SizedBox(
       height: 90.0,
       child: Card(
-        child: ListTile(
-          leading: IconButton(
-            iconSize: 44.0,
-            onPressed: onTap,
-            icon: selected ? Image.asset('tick.png') : const CircleAvatar(
-              backgroundColor: Colors.white,
-              radius: 20.0,
-              backgroundImage: AssetImage('avatar.png'),),
-          ),
-          title: Text(ref.read(emailProvider).sender),
-          subtitle: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Slidable(
+          direction: Axis.horizontal,
+          startActionPane: ActionPane(
+            motion: const BehindMotion(),
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                child: Text(ref.read(emailProvider).object, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-              Text(ref.read(emailProvider).body, maxLines: 1, overflow: TextOverflow.ellipsis),
+              SlidableAction(
+                onPressed: (context) {},
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                icon: Icons.delete,
+                label: 'Delete',
+              )
             ],
           ),
-          trailing: Column(
+          closeOnScroll: true,
+          endActionPane: ActionPane(
+            motion: const BehindMotion(),
             children: [
-              Text(formattedDateTimeNow),
-              IconButton(
-                padding: const EdgeInsets.only(top: 8.0),
-                onPressed: () {},
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.star_border_outlined),),
+              SlidableAction(
+                onPressed: (context) {},
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                icon: Icons.archive_outlined,
+                label: 'Archive',
+              )
             ],
           ),
-          isThreeLine: true,
-          onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
+          child: ListTile(
+            leading: IconButton(
+              iconSize: 44.0,
+              onPressed: onTap,
+              icon: selected ? Image.asset('tick.png') : const CircleAvatar(
+                backgroundColor: Colors.white,
+                radius: 20.0,
+                backgroundImage: AssetImage('avatar.png'),),
+            ),
+            title: Text(ref.read(emailProvider).sender, style: boldOnSelect()),
+            subtitle: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                  child: Text(ref.read(emailProvider).object,
+                      style: boldOnSelect(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                Text(ref.read(emailProvider).body,
+                    style: boldOnSelect(), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+            trailing: Column(
+              children: [
+                Text(formattedDateTimeNow),
+                IconButton(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  onPressed: () {},
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.star_border_outlined),),
+              ],
+            ),
+            isThreeLine: true,
+            onTap: () => Navigator.pushNamed(context, '/${Routes.email_page.name}'),
+          ),
         ),
       )
     ),
