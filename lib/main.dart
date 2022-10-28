@@ -9,12 +9,12 @@ void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-final emailProvider = StateProvider<EmailData>((ref) {
-  print(ref);
-  return const EmailData('Apple', 'Expiring subscription',
+final emailProvider = StateProvider<EmailData>((ref) =>
+  const EmailData('Apple', 'Expiring subscription',
   'Action needed in your account, '
-      'please update your payment preference because we could not proceed this month');
-});
+      'please update your payment preference because we could not proceed this month'));
+final cardMailItemProvider = StateProvider<List<int>>((ref) => listOfSelectedMail);
+final favoriteMailProvider = StateProvider((ref) => favoriteMailList);
 
 enum Routes {
   email_page,
@@ -29,6 +29,8 @@ class EmailData {
 }
 
 final formattedDateTimeNow = DateFormat('kk:mm').format(DateTime.now());
+final List<int> listOfSelectedMail = [];
+final List<int> favoriteMailList = [];
 bool scrollingStatus = false;
 bool scrollingUp = false;
 
@@ -81,19 +83,35 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
   GlobalKey<SliverAnimatedListState>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late ListModel<int> _list;
-  int? _selectedItem;
+  int _selectedItem = 0;
   late int _nextItem;
 
   _MyHomePageState(WidgetRef ref);
 
   Widget _buildItem(BuildContext context, int index, Animation<double> animation) {
+    bool emailSelected = ref.watch(cardMailItemProvider).contains(_list[index]);
+    bool favEmailSelected = ref.watch(favoriteMailProvider).contains(_list[index]);
     return CardMailItem(
       animation: animation,
       item: _list[index],
-      selected: _selectedItem == _list[index],
+      selected: !ref.watch(cardMailItemProvider).contains(_list[index]),
+      favoriteTap : () {
+        setState(() {
+          if (!favEmailSelected) {
+            ref.watch(favoriteMailProvider).add(_list[index]);
+          } else {
+            ref.watch(favoriteMailProvider).remove(_list[index]);
+          }
+        });
+      },
       onTap: () {
         setState(() {
-          _selectedItem = _selectedItem == _list[index] ? null : _list[index];
+          if (!emailSelected) {
+            _selectedItem = _list[index];
+            ref.watch(cardMailItemProvider).add(_list[index]);
+          } else {
+            ref.watch(cardMailItemProvider).remove(_list[index]);
+          }
         });
       },
     );
@@ -108,12 +126,15 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
   }
 
   void _remove() {
-    if (_selectedItem != null) {
-      _list.removeAt(_list.indexOf(_selectedItem!));
-      setState(() {
-        _selectedItem = null;
-      });
-    }
+    List<int> listFromProvider = ref.watch(cardMailItemProvider);
+    List<int> cardMailToRemove = [];
+    listFromProvider.forEach((element) {
+      if (listFromProvider.contains(element)) {
+        _list.removeAt(_list.indexOf(element));
+        cardMailToRemove.add(element);
+      }
+    });
+    listFromProvider.removeWhere((element) => cardMailToRemove.contains(element));
   }
 
   @override
@@ -184,27 +205,33 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         ),
         body: CustomScrollView(
           slivers: [
-            _selectedItem != null ? SliverAppBar(
+            ref.watch(cardMailItemProvider).isNotEmpty ? SliverAppBar(
               floating: true,
               pinned: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pushNamed(context, '/'),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/');
+                }
               ),
-              title: Text(_selectedItem != null ? '1' : ''),
+              title: Text(ref.watch(cardMailItemProvider).isNotEmpty ?
+                ref.watch(cardMailItemProvider).length.toString() : ''),
               actions: [
                 IconButton(icon: const Icon(Icons.archive_outlined),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
                 IconButton(icon: const Icon(Icons.delete_outlined),
                   onPressed: () {
-                    _remove();
+                    setState(() {
+                      _remove();
+                    });
                   },),
                 IconButton(icon: const Icon(Icons.mark_email_read),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
                 IconButton(icon: const Icon(Icons.more_horiz),
                   onPressed: () => Navigator.pushNamed(context, '/'),),
               ],
-            ) : SliverAppBar(
+            ) :
+            SliverAppBar(
               leading: IconButton(
                 icon: const Icon(Icons.menu_rounded),
                 onPressed: () => _scaffoldKey.currentState?.openDrawer(),
@@ -487,6 +514,7 @@ class CardMailItem extends ConsumerWidget {
     super.key,
     this.onTap,
     this.selected = false,
+    this.favoriteTap,
     required this.animation,
     required this.item,
   }) : assert(item >= 0);
@@ -495,10 +523,15 @@ class CardMailItem extends ConsumerWidget {
   final VoidCallback? onTap;
   final int item;
   final bool selected;
+  final VoidCallback? favoriteTap;
 
-  TextStyle boldOnSelect() {
-    return selected ? const TextStyle(fontWeight: FontWeight.bold) :
-      const TextStyle(fontWeight: FontWeight.normal);
+  TextStyle boldOnSelect(WidgetRef ref) {
+    if (ref.watch(cardMailItemProvider).isNotEmpty &&
+        ref.watch(cardMailItemProvider).contains(item)) {
+      return const TextStyle(fontWeight: FontWeight.bold);
+    } else {
+      return const TextStyle(fontWeight: FontWeight.normal);
+    }
   }
 
   @override
@@ -514,7 +547,7 @@ class CardMailItem extends ConsumerWidget {
             children: [
               SlidableAction(
                 onPressed: (context) {},
-                backgroundColor: Colors.green,
+                backgroundColor: const Color.fromRGBO(0, 255, 0, 0.7),
                 foregroundColor: Colors.white,
                 icon: Icons.delete,
                 label: 'Delete',
@@ -527,7 +560,7 @@ class CardMailItem extends ConsumerWidget {
             children: [
               SlidableAction(
                 onPressed: (context) {},
-                backgroundColor: Colors.green,
+                backgroundColor: const Color.fromRGBO(0, 255, 0, 0.7),
                 foregroundColor: Colors.white,
                 icon: Icons.archive_outlined,
                 label: 'Archive',
@@ -538,12 +571,9 @@ class CardMailItem extends ConsumerWidget {
             leading: IconButton(
               iconSize: 44.0,
               onPressed: onTap,
-              icon: selected ? Image.asset('tick.png') : const CircleAvatar(
-                backgroundColor: Colors.white,
-                radius: 20.0,
-                backgroundImage: AssetImage('avatar.png'),),
+              icon: _buildSelectionOnAvatar(ref),
             ),
-            title: Text(ref.read(emailProvider).sender, style: boldOnSelect()),
+            title: Text(ref.read(emailProvider).sender, style: boldOnSelect(ref)),
             subtitle: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,20 +581,25 @@ class CardMailItem extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
                   child: Text(ref.read(emailProvider).object,
-                      style: boldOnSelect(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: boldOnSelect(ref), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
                 Text(ref.read(emailProvider).body,
-                    style: boldOnSelect(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    style: boldOnSelect(ref), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
             trailing: Column(
               children: [
                 Text(formattedDateTimeNow),
                 IconButton(
+                  enableFeedback: false,
+                  splashRadius: 2,
                   padding: const EdgeInsets.only(top: 8.0),
-                  onPressed: () {},
+                  onPressed: favoriteTap,
                   constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.star_border_outlined),),
+                  icon: ref.watch(favoriteMailProvider).isNotEmpty &&
+                      ref.watch(favoriteMailProvider).contains(item) ?
+                        const Icon(Icons.star, color: Color.fromRGBO(220, 176, 0, 1.0),)
+                        : const Icon(Icons.star_border_outlined),color: const Color.fromRGBO(220, 176, 0, 1.0)),
               ],
             ),
             isThreeLine: true,
@@ -574,6 +609,18 @@ class CardMailItem extends ConsumerWidget {
       )
     ),
   );
+
+  Widget _buildSelectionOnAvatar(WidgetRef ref) {
+    if (ref.watch(cardMailItemProvider).isNotEmpty &&
+        ref.watch(cardMailItemProvider).contains(item)) {
+      return Image.asset('tick.png');
+    } else {
+      return const CircleAvatar(
+      backgroundColor: Colors.white,
+      radius: 20.0,
+      backgroundImage: AssetImage('avatar.png'),);
+    }
+  }
 }
 
 class ListModel<E> {
